@@ -1,3 +1,4 @@
+from faker import Faker
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from urllib.parse import quote_plus
@@ -10,6 +11,8 @@ DATABASE_PASSWORD = quote_plus("Admin123!")
 DATABASE_HOST = "15.235.202.96"
 DATABASE_NAME = "pusonapp"
 
+# Set the locale to Indonesian
+fake = Faker("id_ID")
 
 # Connect to the database using SQLAlchemy
 DATABASE_URI = f"mysql+pymysql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
@@ -37,6 +40,7 @@ if not DATABASE_NAME:
         "DATABASE_NAME tidak diatur. Pastikan variabel lingkungan sudah diatur dengan benar."
     )
 
+
 # Function to generate dummy data for Question
 def generate_questions():
     questions = [
@@ -60,30 +64,19 @@ def generate_questions():
     for question_text in questions:
         created_at = datetime.now()
         updated_at = datetime.now()
-        # Check if the question already exists to prevent duplicates
-        result = session.execute(
+        session.execute(
             text(
                 """
-                SELECT COUNT(*) FROM Question WHERE question_text = :question_text
+                INSERT INTO Question (question_text, createdAt, updatedAt) 
+                VALUES (:question_text, :created_at, :updated_at)
                 """
             ),
-            {"question_text": question_text}
-        ).scalar()
-
-        if result == 0:
-            session.execute(
-                text(
-                    """
-                    INSERT INTO Question (question_text, created_at, updated_at) 
-                    VALUES (:question_text, :created_at, :updated_at)
-                    """
-                ),
-                {
-                    "question_text": question_text,
-                    "created_at": created_at,
-                    "updated_at": updated_at,
-                },
-            )
+            {
+                "question_text": question_text,
+                "created_at": created_at,
+                "updated_at": updated_at,
+            },
+        )
     session.commit()
 
 
@@ -91,8 +84,7 @@ def generate_questions():
 def generate_responses():
     user_data = session.execute(text("SELECT id FROM User")).fetchall()
     question_data = session.execute(text("SELECT id FROM Question")).fetchall()
-    med_check_up_data = session.execute(
-        text("SELECT id, created_at, updated_at FROM MedCheckUp")).fetchall()
+    med_check_up_data = session.execute(text("SELECT id FROM MedCheckUp")).fetchall()
 
     if not user_data:
         raise ValueError("No user records found in the database.")
@@ -103,19 +95,19 @@ def generate_responses():
 
     answers = ["SL", "S", "J", "TP"]
 
-    for med_check_up in med_check_up_data:
-        med_check_up_id = med_check_up[0]
-        created_at = med_check_up[1]
-        updated_at = med_check_up[2]
+    for med_check_up_id_tuple in med_check_up_data:
+        med_check_up_id = med_check_up_id_tuple[0]
         for user_id_tuple in user_data:
             user_id = user_id_tuple[0]
             for question_id_tuple in question_data:
                 question_id = question_id_tuple[0]
                 answer = random.choice(answers)
+                created_at = datetime.now()
+                updated_at = datetime.now()
                 session.execute(
                     text(
                         """
-                        INSERT INTO Respon (user_id, question_id, med_check_up_id, answer, createdAt, updatedAt) 
+                        INSERT INTO Respon (user_id, quesion_id, med_check_up_id, answer, createdAt, updatedAt) 
                         VALUES (:user_id, :question_id, :med_check_up_id, :answer, :created_at, :updated_at)
                         """
                     ),
@@ -133,26 +125,25 @@ def generate_responses():
 
 # Function to generate dummy data for IncomeLevel
 def generate_income_levels():
-    med_check_up_data = session.execute(
-        text("SELECT id, created_at, updated_at FROM MedCheckUp")).fetchall()
+    med_check_up_data = session.execute(text("SELECT id FROM MedCheckUp")).fetchall()
 
     if not med_check_up_data:
         raise ValueError("No med check-up records found in the database.")
 
-    for med_check_up in med_check_up_data:
-        med_check_up_id = med_check_up[0]
-        created_at = med_check_up[1]
-        updated_at = med_check_up[2]
+    for med_check_up_id_tuple in med_check_up_data:
+        med_check_up_id = med_check_up_id_tuple[0]
         monthly_income = random.uniform(500000, 10000000)
         child_expense = random.uniform(500000, 10000000)
         family_expense = random.uniform(500000, 10000000)
         dependents_count = random.randint(1, 5)
         social_assistance_received = random.uniform(0, 1000000)
         total_family_expense = family_expense + child_expense
+        created_at = datetime.now()
+        updated_at = datetime.now()
         session.execute(
             text(
                 """
-                INSERT INTO IncomeLevel (monthly_income, child_expense, family_expense, dependents_count, social_assistance_received, total_family_expense, createdAt, updatedAt, med_check_up_id) 
+                INSERT INTO IncomeLevel (monthly_income, child_expense, family_expense, dependents_count, social_assistance_received, total_family_expense, created_at, updated_at, med_check_up_id) 
                 VALUES (:monthly_income, :child_expense, :family_expense, :dependents_count, :social_assistance_received, :total_family_expense, :created_at, :updated_at, :med_check_up_id)
                 """
             ),
