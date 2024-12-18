@@ -1,4 +1,5 @@
-from faker import Faker
+import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from urllib.parse import quote_plus
@@ -8,11 +9,10 @@ import random
 # Database configuration
 DATABASE_USER = "pusonapp"
 DATABASE_PASSWORD = quote_plus("Admin123!")
+
 DATABASE_HOST = "15.235.202.96"
 DATABASE_NAME = "pusonapp"
 
-# Set the locale to Indonesian
-fake = Faker("id_ID")
 
 # Connect to the database using SQLAlchemy
 DATABASE_URI = f"mysql+pymysql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
@@ -40,7 +40,6 @@ if not DATABASE_NAME:
         "DATABASE_NAME tidak diatur. Pastikan variabel lingkungan sudah diatur dengan benar."
     )
 
-
 # Function to generate dummy data for Question
 def generate_questions():
     questions = [
@@ -64,19 +63,30 @@ def generate_questions():
     for question_text in questions:
         created_at = datetime.now()
         updated_at = datetime.now()
-        session.execute(
+        # Check if the question already exists to prevent duplicates
+        result = session.execute(
             text(
                 """
-                INSERT INTO Question (question_text, createdAt, updatedAt) 
-                VALUES (:question_text, :created_at, :updated_at)
+                SELECT COUNT(*) FROM Question WHERE question_text = :question_text
                 """
             ),
-            {
-                "question_text": question_text,
-                "created_at": created_at,
-                "updated_at": updated_at,
-            },
-        )
+            {"question_text": question_text}
+        ).scalar()
+
+        if result == 0:
+            session.execute(
+                text(
+                    """
+                    INSERT INTO Question (question_text, createdAt, updatedAt) 
+                    VALUES (:question_text, :created_at, :updated_at)
+                    """
+                ),
+                {
+                    "question_text": question_text,
+                    "created_at": created_at,
+                    "updated_at": updated_at,
+                },
+            )
     session.commit()
 
 
@@ -107,7 +117,7 @@ def generate_responses():
                 session.execute(
                     text(
                         """
-                        INSERT INTO Respon (user_id, quesion_id, med_check_up_id, answer, createdAt, updatedAt) 
+                        INSERT INTO Respon (user_id, question_id, med_check_up_id, answer, createdAt, updatedAt) 
                         VALUES (:user_id, :question_id, :med_check_up_id, :answer, :created_at, :updated_at)
                         """
                     ),
