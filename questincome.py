@@ -1,5 +1,3 @@
-import pandas as pd
-import numpy as np
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from urllib.parse import quote_plus
@@ -9,7 +7,6 @@ import random
 # Database configuration
 DATABASE_USER = "pusonapp"
 DATABASE_PASSWORD = quote_plus("Admin123!")
-
 DATABASE_HOST = "15.235.202.96"
 DATABASE_NAME = "pusonapp"
 
@@ -77,7 +74,7 @@ def generate_questions():
             session.execute(
                 text(
                     """
-                    INSERT INTO Question (question_text, createdAt, updatedAt) 
+                    INSERT INTO Question (question_text, created_at, updated_at) 
                     VALUES (:question_text, :created_at, :updated_at)
                     """
                 ),
@@ -94,7 +91,8 @@ def generate_questions():
 def generate_responses():
     user_data = session.execute(text("SELECT id FROM User")).fetchall()
     question_data = session.execute(text("SELECT id FROM Question")).fetchall()
-    med_check_up_data = session.execute(text("SELECT id FROM MedCheckUp")).fetchall()
+    med_check_up_data = session.execute(
+        text("SELECT id, created_at, updated_at FROM MedCheckUp")).fetchall()
 
     if not user_data:
         raise ValueError("No user records found in the database.")
@@ -105,15 +103,15 @@ def generate_responses():
 
     answers = ["SL", "S", "J", "TP"]
 
-    for med_check_up_id_tuple in med_check_up_data:
-        med_check_up_id = med_check_up_id_tuple[0]
+    for med_check_up in med_check_up_data:
+        med_check_up_id = med_check_up[0]
+        created_at = med_check_up[1]
+        updated_at = med_check_up[2]
         for user_id_tuple in user_data:
             user_id = user_id_tuple[0]
             for question_id_tuple in question_data:
                 question_id = question_id_tuple[0]
                 answer = random.choice(answers)
-                created_at = datetime.now()
-                updated_at = datetime.now()
                 session.execute(
                     text(
                         """
@@ -135,25 +133,26 @@ def generate_responses():
 
 # Function to generate dummy data for IncomeLevel
 def generate_income_levels():
-    med_check_up_data = session.execute(text("SELECT id FROM MedCheckUp")).fetchall()
+    med_check_up_data = session.execute(
+        text("SELECT id, created_at, updated_at FROM MedCheckUp")).fetchall()
 
     if not med_check_up_data:
         raise ValueError("No med check-up records found in the database.")
 
-    for med_check_up_id_tuple in med_check_up_data:
-        med_check_up_id = med_check_up_id_tuple[0]
+    for med_check_up in med_check_up_data:
+        med_check_up_id = med_check_up[0]
+        created_at = med_check_up[1]
+        updated_at = med_check_up[2]
         monthly_income = random.uniform(500000, 10000000)
         child_expense = random.uniform(500000, 10000000)
         family_expense = random.uniform(500000, 10000000)
         dependents_count = random.randint(1, 5)
         social_assistance_received = random.uniform(0, 1000000)
         total_family_expense = family_expense + child_expense
-        created_at = datetime.now()
-        updated_at = datetime.now()
         session.execute(
             text(
                 """
-                INSERT INTO IncomeLevel (monthly_income, child_expense, family_expense, dependents_count, social_assistance_received, total_family_expense, created_at, updated_at, med_check_up_id) 
+                INSERT INTO IncomeLevel (monthly_income, child_expense, family_expense, dependents_count, social_assistance_received, total_family_expense, createdAt, updatedAt, med_check_up_id) 
                 VALUES (:monthly_income, :child_expense, :family_expense, :dependents_count, :social_assistance_received, :total_family_expense, :created_at, :updated_at, :med_check_up_id)
                 """
             ),
