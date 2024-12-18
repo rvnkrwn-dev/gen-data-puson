@@ -21,7 +21,7 @@ files_to_run = [
 # Fungsi untuk menjalankan file Python
 def run_file(file_name):
     try:
-        subprocess.run(["python", file_name], check=True)
+        subprocess.run(["python3", file_name], check=True)
         print(f"Sukses menjalankan {file_name}")
     except subprocess.CalledProcessError as e:
         print(f"Error menjalankan {file_name}: {e}")
