@@ -80,7 +80,7 @@ def generate_user_data(user_count):
     session.commit()
 
 # Generate data for 100 users
-generate_user_data(user_count=1000000)
+generate_user_data(user_count=100)
 
 # Close the session
 session.close()
