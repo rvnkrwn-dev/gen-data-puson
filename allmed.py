@@ -4,7 +4,6 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from urllib.parse import quote_plus
 import math
-import logging
 
 # Database configuration
 DATABASE_USER = "pusonapp"
@@ -54,6 +53,7 @@ standarLingkarKepala = {
     7: {"male": 52.5, "female": 51.2},
 }
 
+
 # Enum untuk StuntingStatus
 class StuntingStatus:
     normal = "normal"
@@ -61,25 +61,31 @@ class StuntingStatus:
     overweight = "overweight"
     obese = "obese"
 
+
 # Fungsi menghitung IMT
 def calculate_imt(weight, height):
     return weight / ((height / 100) ** 2)
 
+
 # Fungsi menghitung IPB
 def calculate_ipb(weight, circumference):
     return weight / circumference
+
 
 # Fungsi memberikan variasi berdasarkan standar
 def apply_variation(value, variation_type):
     if variation_type == "lebih":
         return round(value * 1.1, 2)  # 10% lebih tinggi
     elif variation_type == "sama":
-        return round(value * (0.95 + 0.1 * random.random()), 2)  # dalam range ±5% dari nilai standar
+        return round(
+            value * (0.95 + 0.1 * random.random()), 2
+        )  # dalam range ±5% dari nilai standar
     elif variation_type == "sedikit_beda":
         return round(value * 0.9, 2)  # 10% lebih rendah
     elif variation_type == "beda_jauh":
         return round(value * 0.8, 2)  # 20% lebih rendah
     return value
+
 
 # Fungsi menentukan status stunting
 def determine_stunting_status(age, gender, weight, height, circumference):
@@ -98,11 +104,13 @@ def determine_stunting_status(age, gender, weight, height, circumference):
     else:
         return StuntingStatus.normal
 
+
 # Fungsi menghitung umur
 def calculate_age(birthdate):
     now = datetime.now()
     age = (now - birthdate).days / 365.25
     return round(age, 2)
+
 
 # Fungsi generate data dengan proporsi yang seimbang
 def generate_balanced_data(child_data, admin_posyandu_ids):
@@ -126,12 +134,7 @@ def generate_balanced_data(child_data, admin_posyandu_ids):
     )
     random.shuffle(statuses)
 
-    months = [
-        "2023-01-", "2023-02-", "2023-03-", "2023-04-", "2023-05-", "2023-06-", "2023-07-",
-        "2023-09-", "2023-10-", "2023-11-", "2023-12-", "2024-01-", "2024-02-", "2024-03-",
-        "2024-04-", "2024-05-", "2024-06-", "2024-07-", "2024-09-", "2024-10-", "2024-11-", "2024-12-"
-    ]
-
+    months = ["2024-07-", "2024-08-", "2024-09-", "2024-10-", "2024-11-"]
     for i, child in enumerate(child_data):
         gender = "male" if child[2] == "male" else "female"
         age = calculate_age(child[1])
@@ -174,9 +177,6 @@ def generate_balanced_data(child_data, admin_posyandu_ids):
         )
     return results
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Mengambil data dari tabel Child dan User
 child_data = session.execute(text("SELECT id, bod, gender FROM Child")).fetchall()
@@ -187,53 +187,46 @@ admin_posyandu_ids = session.execute(
 # Generate data
 generated_data = generate_balanced_data(child_data, admin_posyandu_ids)
 
-# Batch insert data ke tabel MedCheckUp dan ResultMedCheckUp
-try:
-    med_check_up_data = []
-    result_med_check_up_data = []
-
-    for data in generated_data:
-        med_check_up_data.append(
-            {
-                "child_id": data["child_id"],
-                "height": data["height"],
-                "weight": data["weight"],
-                "age": data["age"],
-                "circumference": data["circumference"],
-                "user_id": data["user_id"],
-                "created_at": data["created_at"],
-                "updated_at": data["updated_at"],
-            }
-        )
-
-        result_med_check_up_data.append(
-            {
-                "imt": data["imt"],
-                "ipb": data["ipb"],
-                "status": data["status"],
-                "created_at": data["created_at"],
-                "updated_at": data["updated_at"],
-            }
-        )
-
-    # Insert MedCheckUp data
+# Insert data ke tabel MedCheckUp dan ResultMedCheckUp
+for data in generated_data:
     session.execute(
-        text("""
+        text(
+            """
             INSERT INTO MedCheckUp (child_id, height, weight, age, circumference, user_id, created_at, updated_at) 
             VALUES (:child_id, :height, :weight, :age, :circumference, :user_id, :created_at, :updated_at)
-        """), med_check_up_data
+            """
+        ),
+        {
+            "child_id": data["child_id"],
+            "height": data["height"],
+            "weight": data["weight"],
+            "age": data["age"],
+            "circumference": data["circumference"],
+            "user_id": data["user_id"],
+            "created_at": data["created_at"],
+            "updated_at": data["updated_at"],
+        },
     )
+    # Mendapatkan id dari MedCheckUp yang baru saja diinsert
+    med_check_up_id = session.execute(text("SELECT LAST_INSERT_ID()")).scalar()
 
-    # Insert ResultMedCheckUp data
+    # Insert ke tabel ResultMedCheckUp
     session.execute(
-        text("""
-            INSERT INTO ResultMedCheckUp (imt, ipb, status, created_at, updated_at) 
-            VALUES (:imt, :ipb, :status, :created_at, :updated_at)
-        """), result_med_check_up_data
+        text(
+            """
+            INSERT INTO ResultMedCheckUp (imt, ipb, status, med_check_up_id, created_at, updated_at) 
+            VALUES (:imt, :ipb, :status, :med_check_up_id, :created_at, :updated_at)
+            """
+        ),
+        {
+            "imt": data["imt"],
+            "ipb": data["ipb"],
+            "status": data["status"],
+            "med_check_up_id": med_check_up_id,
+            "created_at": data["created_at"],
+            "updated_at": data["updated_at"],
+        },
     )
 
-    session.commit()
-    logger.info("Data berhasil dibuat dan dimasukkan ke tabel MedCheckUp dan ResultMedCheckUp")
-except Exception as e:
-    session.rollback()
-    logger.error(f"Terjadi kesalahan saat memasukkan data: {e}")
+session.commit()
+print("Data berhasil dibuat dan dimasukkan ke tabel MedCheckUp dan ResultMedCheckUp")
