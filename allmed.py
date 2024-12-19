@@ -134,7 +134,7 @@ def generate_balanced_data(child_data, admin_posyandu_ids):
     )
     random.shuffle(statuses)
 
-    months = ["2024-07-", "2024-08-", "2024-09-", "2024-10-", "2024-11-"]
+    months = ["2023-01-“, "2023-02-“, "2023-03-“, "2023-04-“, "2023-05-“,”2023-06-“, "2023-07-“, "2023-09-“, "2023-10-", "2023-11-“, "2023-12-“, "2024-01-“, "2024-02-“, "2024-03-“, "2024-04-“, "2024-05-“,”2024-06-“, "2024-07-“, "2024-09-“, "2024-10-", "2024-11-“, "2024-12-“]
     for i, child in enumerate(child_data):
         gender = "male" if child[2] == "male" else "female"
         age = calculate_age(child[1])
